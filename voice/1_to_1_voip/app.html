@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>1-to-1 Voice Call</title>
+  <style>
+    body { margin:0; font-family:Arial,sans-serif; background:#0f0f0f; color:#fff;
+           display:flex; height:100vh; align-items:center; justify-content:center;
+           flex-direction:column; user-select:none; -webkit-user-select:none; }
+    #voiceStatus { font-size:14px; color:#4ade80; margin-bottom:10px; text-align:center;
+                   padding:10px; font-weight:bold; }
+    #unlockBtn, #pairBtn { width:100%; max-width:300px; padding:15px; margin-bottom:12px;
+        background:#3b82f6; color:#fff; border:none; border-radius:8px;
+        font-size:16px; font-weight:bold; cursor:pointer;
+        box-shadow:0 4px 15px rgba(59,130,246,0.4); }
+    #unlockBtn:active, #pairBtn:active { transform:scale(0.95); }
+    #pairRow { display:flex; gap:8px; margin-bottom:12px; width:100%; max-width:300px; }
+    #pairInput { flex:1; padding:12px; font-size:16px; border-radius:8px; border:none;
+                 background:#1f1f1f; color:#fff; text-align:center; }
+    #voicePttBtn { width:160px; height:160px; border-radius:50%; background:#ef4444;
+        color:#fff; border:none; font-size:16px; font-weight:bold;
+        box-shadow:0 4px 15px rgba(239,68,68,0.4); touch-action:none;
+        -webkit-tap-highlight-color:transparent; transition:all 0.1s;
+        user-select:none; -webkit-user-select:none; }
+    #voicePttBtn.talking { background:#22c55e !important; transform:scale(0.92);
+        box-shadow:0 4px 15px rgba(34,197,94,0.7) !important; }
+    #voicePttBtn:disabled { opacity:0.3; }
+    #debug { font-size:11px; color:#888; max-height:200px; overflow-y:auto;
+      background:rgba(0,0,0,0.7); padding:15px; border-radius:8px; width:90%;
+      max-width:500px; white-space:pre-wrap; font-family:monospace; margin-top:20px; }
+  </style>
+</head>
+<body>
+
+  <div style="font-size:18px; margin-bottom:10px;">📞 1-to-1 Voice</div>
+  <div id="voiceStatus">Connecting...</div>
+
+  <button id="unlockBtn" onclick="unlockAudioNow()">🔊 TAP TO ENABLE AUDIO</button>
+
+  <div id="pairRow">
+    <input id="pairInput" type="number" inputmode="numeric"
+           placeholder="Peer ID (e.g. 12345)" />
+    <button id="pairBtn" onclick="requestPair()">📞 Call</button>
+  </div>
+
+  <button id="voicePttBtn" disabled
+          ontouchstart="event.preventDefault(); startVoiceTalk();"
+          ontouchend="event.preventDefault(); stopVoiceTalk();"
+          ontouchcancel="stopVoiceTalk();"
+          onmousedown="startVoiceTalk();"
+          onmouseup="stopVoiceTalk();"
+          onmouseleave="stopVoiceTalk();">
+      HOLD TO TALK
+  </button>
+
+  <div id="debug">Logs will appear here...</div>
+
+  <script src="cordova.js"></script>
+  <script>
+  let debugMessages = [];
+  function voiceLog(msg) {
+      console.log('[VOICE] ' + msg);
+      const ts = new Date().toLocaleTimeString();
+      debugMessages.push(`[${ts}] ${msg}`);
+      if (debugMessages.length > 15) debugMessages.shift();
+      const s = document.getElementById('voiceStatus');
+      if (s) s.textContent = msg;
+      const d = document.getElementById('debug');
+      if (d) { d.textContent = debugMessages.join('\n'); d.scrollTop = d.scrollHeight; }
+  }
+
+  const VOICE_CONFIG = {
+      wsHost: 'wno-host.ddns.net',
+      wsPort: 27016,
+      roomId: 1,
+      clientId: Math.floor(Math.random() * 60000) + 1
+  };
+
+  let voiceWs = null;
+  let voiceAudioCtx = null;
+  let voiceMicStream = null;
+  let voiceProcessor = null;
+  let voiceTalking = false;
+  let voiceSeq = 0;
+  let voicePlaybackTime = 0;
+  let peerId = 0;           // 0 = not paired
+
+  // ---------------------------------------------------------------
+  function requestMicPermission() {
+      return new Promise((resolve, reject) => {
+          if (typeof cordova === 'undefined' || !cordova.plugins.permissions) {
+              resolve(); return;
+          }
+          const p = cordova.plugins.permissions;
+          p.checkPermission(p.RECORD_AUDIO, (st) => {
+              if (st.hasPermission) resolve();
+              else p.requestPermission(p.RECORD_AUDIO, (s) => {
+                  s.hasPermission ? resolve() : reject(new Error('Mic denied'));
+              }, reject);
+          }, reject);
+      });
+  }
+
+  async function unlockAudioNow() {
+      voiceLog('🔊 Unlocking audio...');
+      await initVoiceAudio();
+      if (voiceAudioCtx) {
+          const buf = voiceAudioCtx.createBuffer(1, 1, 16000);
+          const src = voiceAudioCtx.createBufferSource();
+          src.buffer = buf; src.connect(voiceAudioCtx.destination); src.start(0);
+          voiceLog('🔊 Audio enabled (' + voiceAudioCtx.state + ')');
+          const b = document.getElementById('unlockBtn');
+          b.style.background = '#22c55e'; b.textContent = '✅ AUDIO ENABLED'; b.disabled = true;
+      }
+  }
+
+  async function initVoiceAudio() {
+      if (voiceAudioCtx && voiceAudioCtx.state === 'running') return;
+      if (!voiceAudioCtx) {
+          voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      }
+      if (voiceAudioCtx.state === 'suspended') await voiceAudioCtx.resume();
+  }
+
+  async function setupVoiceMic() {
+      await requestMicPermission();
+      try {
+          voiceMicStream = await navigator.mediaDevices.getUserMedia({
+              audio: { echoCancellation:true, noiseSuppression:true,
+                       autoGainControl:true, channelCount:1, sampleRate:16000 }
+          });
+      } catch (e) { voiceLog('❌ Mic denied: ' + e.message); return false; }
+
+      const source = voiceAudioCtx.createMediaStreamSource(voiceMicStream);
+      voiceProcessor = voiceAudioCtx.createScriptProcessor(1024, 1, 1);
+
+      voiceProcessor.onaudioprocess = (e) => {
+          if (!voiceTalking || !peerId || !voiceWs || voiceWs.readyState !== WebSocket.OPEN) return;
+
+          const input = e.inputBuffer.getChannelData(0);
+          const pcm16 = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+              const s = Math.max(-1, Math.min(1, input[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+
+          // header: room(1)+sender(2)+target(2)+seq(4) = 9 bytes
+          const headerLen = 9;
+          const packet = new Uint8Array(headerLen + pcm16.length * 2);
+          const dv = new DataView(packet.buffer);
+          packet[0] = VOICE_CONFIG.roomId;
+          dv.setUint16(1, VOICE_CONFIG.clientId, false);
+          dv.setUint16(3, peerId,                false);
+          dv.setUint32(5, voiceSeq++,            false);
+
+          const out = new DataView(packet.buffer, headerLen);
+          for (let i = 0; i < pcm16.length; i++) out.setInt16(i * 2, pcm16[i], true);
+
+          try { voiceWs.send(packet.buffer); } catch (err) {}
+      };
+
+      source.connect(voiceProcessor);
+      const mute = voiceAudioCtx.createGain();
+      mute.gain.value = 0;
+      voiceProcessor.connect(mute);
+      mute.connect(voiceAudioCtx.destination);
+      return true;
+  }
+
+  // ---------------------------------------------------------------
+  function handleBinaryPacket(arrayBuf) {
+      const buf = new Uint8Array(arrayBuf);
+      if (buf.length < 1) return;
+      const type = buf[0];
+
+      // PAIR_OK: 0xFC + peer(4)
+      if (type === 0xFC && buf.length >= 5) {
+          const dv = new DataView(buf.buffer);
+          peerId = dv.getUint32(1, false);
+          voiceLog('✅ Paired with ' + peerId);
+          document.getElementById('voicePttBtn').disabled = false;
+          document.getElementById('pairBtn').textContent = '❌ Hang up';
+          document.getElementById('pairBtn').style.background = '#ef4444';
+          document.getElementById('pairBtn').onclick = hangUp;
+          return;
+      }
+
+      // PAIR_FAIL: 0xFB + reason(4)
+      if (type === 0xFB && buf.length >= 5) {
+          const dv = new DataView(buf.buffer);
+          const r = dv.getUint32(1, false);
+          const msg = {1:'peer offline', 2:'peer busy', 3:'peer left', 4:'invalid'}[r] || ('error '+r);
+          voiceLog('❌ Pair failed: ' + msg);
+          peerId = 0;
+          document.getElementById('voicePttBtn').disabled = true;
+          document.getElementById('pairBtn').textContent = '📞 Call';
+          document.getElementById('pairBtn').style.background = '#3b82f6';
+          document.getElementById('pairBtn').onclick = requestPair;
+          return;
+      }
+
+      // AUDIO: room(1)+sender(2)+target(2)+seq(4)+pcm
+      if (buf.length >= 9) {
+          if (!voiceAudioCtx) return;
+          const dv = new DataView(buf.buffer);
+          const senderId = dv.getUint16(1, false);
+          const targetId = dv.getUint16(3, false);
+
+          if (senderId !== peerId || targetId !== VOICE_CONFIG.clientId) return;
+
+          const payloadLen = buf.length - 9;
+          if (payloadLen < 2) return;
+
+          const sampleCount = payloadLen >> 1;
+          const pcmView = new DataView(buf.buffer, 9);
+          const f32 = new Float32Array(sampleCount);
+          for (let i = 0; i < sampleCount; i++) {
+              f32[i] = pcmView.getInt16(i * 2, true) / 32768;
+          }
+
+          const audioBuffer = voiceAudioCtx.createBuffer(1, sampleCount, 16000);
+          audioBuffer.getChannelData(0).set(f32);
+          const src = voiceAudioCtx.createBufferSource();
+          src.buffer = audioBuffer;
+          src.connect(voiceAudioCtx.destination);
+
+          const now = voiceAudioCtx.currentTime;
+          if (voicePlaybackTime < now + 0.01) voicePlaybackTime = now + 0.05;
+          src.start(voicePlaybackTime);
+          voicePlaybackTime += audioBuffer.duration;
+      }
+  }
+
+  // ---------------------------------------------------------------
+  function requestPair() {
+      if (!voiceWs || voiceWs.readyState !== WebSocket.OPEN) {
+          voiceLog('⚠️ Not connected yet'); return;
+      }
+      const target = parseInt(document.getElementById('pairInput').value, 10);
+      if (!target || target === VOICE_CONFIG.clientId) {
+          voiceLog('⚠️ Enter a valid peer ID'); return;
+      }
+      voiceLog('📞 Calling ' + target + '...');
+
+      const p = new Uint8Array(9);
+      p[0] = 0xFD;
+      const dv = new DataView(p.buffer);
+      dv.setUint32(1, VOICE_CONFIG.clientId, false);
+      dv.setUint32(5, target, false);
+      voiceWs.send(p.buffer);
+  }
+
+  function hangUp() {
+      peerId = 0;
+      document.getElementById('voicePttBtn').disabled = true;
+      document.getElementById('pairBtn').textContent = '📞 Call';
+      document.getElementById('pairBtn').style.background = '#3b82f6';
+      document.getElementById('pairBtn').onclick = requestPair;
+      voiceLog('☎️ Hung up');
+      // Reconnect to drop the pairing on the server
+      if (voiceWs) { try { voiceWs.close(); } catch(e){} }
+  }
+
+  // ---------------------------------------------------------------
+  function connectVoice() {
+      if (voiceWs && voiceWs.readyState === WebSocket.OPEN) return;
+
+      const url = `ws://${VOICE_CONFIG.wsHost}:${VOICE_CONFIG.wsPort}`;
+      voiceLog('Connecting... (my ID: ' + VOICE_CONFIG.clientId + ')');
+
+      voiceWs = new WebSocket(url);
+      voiceWs.binaryType = 'arraybuffer';
+
+      voiceWs.onopen = () => {
+          // JOIN
+          const join = new Uint8Array(6);
+          join[0] = 0xFF;
+          new DataView(join.buffer).setUint32(1, VOICE_CONFIG.clientId, false);
+          join[5] = VOICE_CONFIG.roomId;
+          voiceWs.send(join.buffer);
+
+          voiceLog('✅ Connected · ID ' + VOICE_CONFIG.clientId);
+
+          // heartbeat + keep-awake pings
+          setInterval(() => {
+              if (voiceWs.readyState !== WebSocket.OPEN) return;
+              const hb = new Uint8Array(9);
+              hb[0] = VOICE_CONFIG.roomId;
+              const dv = new DataView(hb.buffer);
+              dv.setUint16(1, VOICE_CONFIG.clientId, false);
+              dv.setUint16(3, peerId, false);
+              dv.setUint32(5, voiceSeq++, false);
+              voiceWs.send(hb.buffer);
+          }, 5000);
+          setInterval(() => {
+              if (voiceWs.readyState === WebSocket.OPEN) {
+                  voiceWs.send(new Uint8Array([0x00]));
+              }
+          }, 1000);
+      };
+
+      voiceWs.onmessage = (ev) => {
+          if (ev.data instanceof ArrayBuffer) handleBinaryPacket(ev.data);
+      };
+
+      voiceWs.onclose = () => {
+          peerId = 0;
+          document.getElementById('voicePttBtn').disabled = true;
+          voiceLog('❌ Disconnected — reconnecting...');
+          setTimeout(connectVoice, 2000);
+      };
+
+      voiceWs.onerror = () => voiceLog('❌ WS error');
+  }
+
+  // ---------------------------------------------------------------
+  async function startVoiceTalk() {
+      if (!voiceAudioCtx || voiceAudioCtx.state !== 'running') {
+          voiceLog('⚠️ Tap "ENABLE AUDIO" first!'); return;
+      }
+      if (!peerId) { voiceLog('⚠️ Not paired'); return; }
+      if (!voiceMicStream) {
+          const ok = await setupVoiceMic();
+          if (!ok) return;
+      }
+      voiceTalking = true;
+      const btn = document.getElementById('voicePttBtn');
+      btn.classList.add('talking'); btn.textContent = '🎤 TALKING';
+  }
+
+  function stopVoiceTalk() {
+      voiceTalking = false;
+      const btn = document.getElementById('voicePttBtn');
+      btn.classList.remove('talking'); btn.textContent = 'HOLD TO TALK';
+  }
+
+  // ---------------------------------------------------------------
+  document.addEventListener('deviceready', () => {
+      voiceLog('Device ready. Connecting...');
+      if (window.plugins && window.plugins.insomnia) window.plugins.insomnia.keepAwake();
+      connectVoice();
+  }, false);
+
+  if (typeof cordova === 'undefined') {
+      window.addEventListener('load', () => {
+          voiceLog('Browser mode. Connecting...');
+          connectVoice();
+      });
+  }
+  </script>
+</body>
+</html>
