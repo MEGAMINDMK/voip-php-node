@@ -1,0 +1,38 @@
+{
+  "dependencies": {
+    "aframe": "^1.7.1",
+    "cordova": "^12.0.0"
+  },
+  "devDependencies": {
+    "cordova-android": "^14.0.1",
+    "cordova-custom-config": "^5.1.1",
+    "cordova-plugin-android-permissions": "*",
+    "cordova-plugin-appversion": "*",
+    "cordova-plugin-camera": "*",
+    "cordova-plugin-device": "^3.0.0",
+    "cordova-plugin-inappbrowser": "*",
+    "cordova-plugin-media-capture": "^6.0.0",
+    "cordova-plugin-network-information": "*",
+    "cordova-plugin-uniquedeviceid": "*",
+    "cordova-plugin-websocket": "^0.12.2",
+    "onesignal-cordova-plugin": "*"
+  },
+  "cordova": {
+    "plugins": {
+      "cordova-custom-config": {},
+      "cordova-plugin-inappbrowser": {},
+      "cordova-plugin-appversion": {},
+      "cordova-plugin-network-information": {},
+      "onesignal-cordova-plugin": {},
+      "cordova-plugin-android-permissions": {},
+      "cordova-plugin-device": {},
+      "cordova-plugin-uniquedeviceid": {},
+      "cordova-plugin-camera": {
+        "ANDROIDX_CORE_VERSION": "1.6.+"
+      }
+    },
+    "platforms": [
+      "android"
+    ]
+  }
+}

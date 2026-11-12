@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="io.cordova.relay" version="1.0.6" xmlns="https://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="https://cordova.apache.org/ns/1.0">
+    <name>VCMP VOIP</name>
+    <description>VCMP VOIP</description>
+    <author email="muhommadraahim1@gmail.com" href="https://web-net.netlify.app">M Raahim Khattak</author>
+    <preference name="stay-in-webview" value="true" />
+    <preference name="orientation" value="default" />
+    <preference name="target-device" value="universal" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="OverrideUserAgent" value="Mozilla/5.0 (Linux; Android 13; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36 Edg/127.0.0.0" />
+    <preference name="android-minSdkVersion" value="23" />
+    <preference name="android-compileSdkVersion" value="36" />
+    <preference name="android-targetSdkVersion" value="36" />
+    <preference name="AndroidXEnabled" value="true" />
+    <preference name="errorUrl" value="file:///android_asset/www/error.html" />
+    <preference name="LoadUrlTimeoutValue" value="10000" />
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#ffffff" />
+    <preference name="android-requestLegacyExternalStorage" value="true" />
+    <preference name="AndroidPersistentFileLocation" value="Compatibility" />
+    <preference name="OneSignal_notification_icon" value="notification_icon" />
+    <content src="index.html" />
+    <plugin name="cordova-plugin-device" source="npm" spec="*" />
+    <plugin name="cordova-plugin-uniquedeviceid" source="npm" spec="*" />
+    <plugin name="cordova-custom-config" source="npm" spec="*" />
+    <plugin name="cordova-plugin-inappbrowser" source="npm" spec="*" />
+    <plugin name="cordova-plugin-appversion" source="npm" spec="*" />
+    <plugin name="cordova-plugin-network-information" source="npm" spec="*" />
+    <plugin name="onesignal-cordova-plugin" source="npm" spec="*" />
+    <plugin name="cordova-plugin-android-permissions" source="npm" spec="*" />
+    <plugin name="cordova-plugin-camera" spec="*" />
+    <icon src="www/img/tree.png" />
+    <access browserOnly="true" origin="*" subdomains="true" />
+    <access launch-external="yes" origin="whatsapp:*" />
+    <access launch-external="yes" origin="fb-messenger:*" />
+    <access launch-external="yes" origin="mailto:*" />
+    <access launch-external="yes" origin="googlechrome:*" />
+    <access launch-external="yes" origin="twitter:*" />
+    <allow-navigation href="*" />
+    <access origin="*" />
+    <allow-navigation href="https://*.google.com/*" />
+    <allow-navigation href="https://*.googlesyndication.com/*" />
+    <allow-navigation href="https://*.gstatic.com/*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="geo:*" />
+    <allow-intent href="market:*" />
+    <allow-intent href="whatsapp:*" />
+    <allow-intent href="mailto:*" />
+    <allow-navigation href="ws://*/*" />
+    <allow-navigation href="wss://*/*" />
+    <platform name="android">
+        <config-file parent="/*" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.CAMERA" />
+			   <uses-permission android:name="android.permission.RECORD_AUDIO" />
+			    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+        </config-file>
+		<edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+        <application android:allowBackup="false" />
+        </edit-config>
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:networkSecurityConfig="@xml/network_security_config" />
+        </edit-config>
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application/activity">
+            <activity android:exported="true" />
+        </edit-config>
+		<edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application/activity">
+            <application android:usesCleartextTraffic="true" />
+        </edit-config>
+        <resource-file src="network_security_config.xml" target="app/src/main/res/xml/network_security_config.xml" />
+        <resource-file src="www/res/raw/notificationa.wav" target="platforms/android/app/src/main/res/raw/notificationa.wav" />
+    </platform>
+</widget>

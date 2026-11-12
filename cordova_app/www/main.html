@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom subtle background glow effect */
+        .bg-glow {
+            background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.15), transparent 70%),
+                        radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.12), transparent 70%);
+        }
+        /* Soft glassmorphism style */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        @media (prefers-color-scheme: dark) {
+            .glass-card {
+                background: rgba(30, 41, 59, 0.75);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col justify-between bg-glow transition-colors duration-300">
+
+    <!-- Header / Brand -->
+    <header class="w-full max-w-6xl mx-auto px-6 py-8 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
+                📱🌐
+            </div>
+            <span class="font-bold text-xl tracking-tight text-slate-900 dark:text-white">VOIP</span>
+        </div>
+        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+            Welcome
+        </span>
+    </header>
+
+    <!-- Main Section -->
+    <main class="flex-grow flex items-center justify-center px-4 py-8">
+        <div class="max-w-4xl w-full mx-auto text-center space-y-10">
+            
+            <!-- Hero Title & Subtitle -->
+            <div class="space-y-3 max-w-xl mx-auto">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                    Select Your Destination
+                </h1>
+                <p class="text-slate-600 dark:text-slate-400 text-base sm:text-lg">
+                    Choose an option below to proceed to your interactive session or dashboard.
+                </p>
+            </div>
+
+            <!-- Action Cards Container -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto px-2">
+                
+                <!-- Card 1: Launch Application -->
+                <a href="app.html" class="group glass-card rounded-2xl p-8 text-left transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-500/50 flex flex-col justify-between relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all duration-300"></div>
+                    
+                    <div>
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                            <i class="fa-solid fa-shapes"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            Main Application
+                        </h2>
+                        <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-6">
+                            Access the full web application dashboard, features, and interactive tools.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center text-sm font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform duration-300">
+                        <span>Launch App</span>
+                        <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                    </div>
+                </a>
+
+                <!-- Card 2: 1 to 1 Session -->
+                <a href="1to1voip.html" class="group glass-card rounded-2xl p-8 text-left transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/10 hover:border-purple-500/50 flex flex-col justify-between relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-all duration-300"></div>
+                    
+                    <div>
+                        <div class="w-14 h-14 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                            <i class="fa-solid fa-comments"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                            1 to 1 Session
+                        </h2>
+                        <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-6">
+                            Connect directly for 1-on-1 consultations, personalized feedback, or direct support.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center text-sm font-semibold text-purple-600 dark:text-purple-400 group-hover:translate-x-1 transition-transform duration-300">
+                        <span>Start Session</span>
+                        <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-6xl mx-auto px-6 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+        <p>&copy; VOIP. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
